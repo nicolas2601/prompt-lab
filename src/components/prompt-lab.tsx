@@ -156,7 +156,7 @@ export function PromptLab() {
         )}
       </AnimatePresence>
 
-      <main className="relative z-10 flex min-w-0 flex-1 flex-col overflow-y-auto">
+      <main className="relative z-10 flex min-w-0 flex-1 flex-col overflow-y-auto overflow-x-hidden">
         <div className="sticky top-0 z-20 flex items-center gap-3 border-b border-line bg-background/85 px-4 py-3 backdrop-blur-sm lg:hidden">
           <button
             type="button"
@@ -169,7 +169,7 @@ export function PromptLab() {
           <span className="font-serif-display text-lg text-ink">PromptLab</span>
         </div>
 
-        <div className="mx-auto w-full max-w-4xl flex-1 px-5 py-10 lg:px-10">
+        <div className="mx-auto w-full max-w-4xl flex-1 px-4 py-8 sm:px-6 lg:py-10 xl:px-10">
           {!hasThread && (
             <motion.div
               initial={{ opacity: 0, y: 10 }}
@@ -179,7 +179,7 @@ export function PromptLab() {
               <p className="font-mono text-[11px] uppercase tracking-[0.2em] text-faint">
                 Prompt workbench — text · image · video
               </p>
-              <h1 className="mt-3 max-w-2xl text-4xl leading-[1.1] tracking-tight text-ink lg:text-5xl">
+              <h1 className="mt-3 max-w-2xl text-balance text-3xl leading-[1.1] tracking-tight text-ink sm:text-4xl 2xl:text-5xl">
                 A rough idea becomes a{" "}
                 <span className="font-serif-display">precise instruction.</span>
               </h1>
@@ -188,7 +188,7 @@ export function PromptLab() {
                 talking to refine it — every version is saved.
               </p>
 
-              <div className="mt-10 grid gap-10 lg:grid-cols-[260px_1fr]">
+              <div className="mt-10 grid gap-10 xl:grid-cols-[240px_minmax(0,1fr)]">
                 <TargetPicker targetId={targetId} onChange={setTargetId} />
                 <Composer disabled={busy} onSubmit={handleSubmit} />
               </div>

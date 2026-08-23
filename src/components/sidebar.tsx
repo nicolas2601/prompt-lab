@@ -20,7 +20,7 @@ export function Sidebar({
   onDelete,
 }: SidebarProps) {
   return (
-    <aside className="relative z-10 flex h-full w-72 shrink-0 flex-col border-r border-line bg-background">
+    <aside className="relative z-10 flex h-full w-64 shrink-0 flex-col border-r border-line bg-background">
       <div className="flex items-baseline gap-2 px-5 pb-2 pt-5">
         <span className="font-serif-display text-xl text-ink">PromptLab</span>
         <span className="font-mono text-[10px] uppercase tracking-widest text-faint">
