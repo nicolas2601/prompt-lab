@@ -53,4 +53,15 @@ describe("buildSystemPrompt", () => {
     expect(buildSystemPrompt("gpt")).toContain("think step by step");
     expect(buildSystemPrompt("claude")).toContain("adaptively");
   });
+
+  it("includes the clarifying questions and refinement protocols", () => {
+    const prompt = buildSystemPrompt("claude");
+    expect(prompt).toContain("## Questions");
+    expect(prompt).toContain("Refinement protocol");
+    expect(prompt).toContain("COMPLETE updated prompt");
+  });
+
+  it("requires a variant for image and video targets", () => {
+    expect(buildSystemPrompt("midjourney")).toContain("## Variant");
+  });
 });

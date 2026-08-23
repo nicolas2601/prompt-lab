@@ -18,54 +18,63 @@ export function TargetPicker({ targetId, onChange }: TargetPickerProps) {
   const categories: TargetCategory[] = ["text", "image", "video"];
   const activeCategory =
     TARGETS.find((t) => t.id === targetId)?.category ?? "text";
+  const targets = TARGETS.filter((t) => t.category === activeCategory);
 
   return (
-    <div className="flex flex-col gap-3">
-      <div className="flex gap-1 self-start rounded-full border border-line bg-surface p-1">
-        {categories.map((category) => (
-          <button
-            key={category}
-            type="button"
-            onClick={() => {
-              const first = TARGETS.find((t) => t.category === category);
-              if (first) onChange(first.id);
-            }}
-            className={`pressable relative rounded-full px-4 py-1.5 text-sm transition-colors duration-200 ${
-              activeCategory === category
-                ? "text-background"
-                : "text-muted hover:text-foreground"
-            }`}
-          >
-            {activeCategory === category && (
-              <motion.span
-                layoutId="category-pill"
-                className="absolute inset-0 rounded-full bg-accent"
-                transition={{ type: "spring", duration: 0.45, bounce: 0.15 }}
-              />
-            )}
-            <span className="relative z-10 font-medium">
+    <div className="flex flex-col">
+      <div className="flex items-center justify-between border-b border-line pb-3">
+        <span className="text-[11px] font-medium uppercase tracking-[0.14em] text-faint">
+          Target model
+        </span>
+        <div className="flex gap-4">
+          {categories.map((category) => (
+            <button
+              key={category}
+              type="button"
+              onClick={() => {
+                const first = TARGETS.find((t) => t.category === category);
+                if (first) onChange(first.id);
+              }}
+              className={`pressable relative cursor-pointer pb-0.5 text-sm transition-colors duration-200 ${
+                activeCategory === category
+                  ? "text-ink"
+                  : "text-faint hover:text-muted"
+              }`}
+            >
               {CATEGORY_LABELS[category]}
-            </span>
-          </button>
-        ))}
+              {activeCategory === category && (
+                <motion.span
+                  layoutId="category-underline"
+                  className="absolute -bottom-[13px] left-0 right-0 h-px bg-ink"
+                  transition={{ type: "spring", duration: 0.4, bounce: 0.1 }}
+                />
+              )}
+            </button>
+          ))}
+        </div>
       </div>
 
-      <div className="flex flex-wrap gap-2">
-        {TARGETS.filter((t) => t.category === activeCategory).map((target) => {
+      <div className="divide-y divide-line">
+        {targets.map((target, index) => {
           const active = target.id === targetId;
           return (
             <button
               key={target.id}
               type="button"
               onClick={() => onChange(target.id)}
-              className={`pressable rounded-lg border px-3 py-2 text-left text-sm transition-colors duration-200 ${
-                active
-                  ? "border-accent/60 bg-accent-dim text-foreground"
-                  : "border-line bg-surface text-muted hover:border-line-strong hover:text-foreground"
+              className={`pressable group flex w-full cursor-pointer items-baseline gap-4 py-2.5 text-left transition-colors duration-200 ${
+                active ? "text-ink" : "text-muted hover:text-ink"
               }`}
             >
-              <span className="block font-medium">{target.label}</span>
-              <span className="block text-xs text-faint">{target.vendor}</span>
+              <span className="font-mono text-[11px] text-faint">
+                {String(index + 1).padStart(2, "0")}
+              </span>
+              <span className="flex-1 text-sm font-medium">{target.label}</span>
+              <span
+                className={`h-1.5 w-1.5 rounded-full transition-colors duration-200 ${
+                  active ? "bg-ink" : "bg-transparent group-hover:bg-line-strong"
+                }`}
+              />
             </button>
           );
         })}
