@@ -46,7 +46,7 @@ export function RunPanel({ prompt, targetId }: RunPanelProps) {
         disabled={state === "running"}
         className="pressable cursor-pointer border border-line-strong px-3 py-1.5 text-[13px] text-muted transition-colors duration-200 hover:bg-ink hover:text-background disabled:opacity-40"
       >
-        {state === "running" ? "Running..." : "Test this prompt ▸"}
+        {state === "running" ? "Ejecutando..." : "Probar este prompt ▸"}
       </button>
 
       <AnimatePresence>
@@ -59,13 +59,13 @@ export function RunPanel({ prompt, targetId }: RunPanelProps) {
             className="mt-3 border border-line bg-surface"
           >
             <p className="border-b border-line px-4 py-2 text-[11px] font-medium uppercase tracking-[0.14em] text-faint">
-              Live output — what the model produced with your prompt
+              Salida en vivo — lo que el modelo produjo con tu prompt
             </p>
             <div className="max-h-[360px] overflow-auto whitespace-pre-wrap px-4 py-3 text-[13px] leading-relaxed text-ink">
               {state === "error" ? (
                 <span className="text-red-600">
-                  The test run failed. Groq may be rate-limited; try again in a
-                  minute.
+                  La prueba falló. Groq puede estar limitando requests;
+                  intentá de nuevo en un minuto.
                 </span>
               ) : (
                 <>

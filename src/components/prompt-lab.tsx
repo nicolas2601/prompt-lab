@@ -4,12 +4,17 @@ import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport, type UIMessage } from "ai";
 import { AnimatePresence, motion } from "motion/react";
 import { useRef, useState, useSyncExternalStore } from "react";
-import { TARGETS, getTarget } from "@/lib/harness";
+import {
+  AUTO_TARGET_ID,
+  getTarget,
+  type PromptLanguage,
+} from "@/lib/harness";
 import { historyStore, type HistoryEntry } from "@/lib/history";
 import { Composer, type Attachment } from "./composer";
+import { Controls } from "./controls";
 import { ResultMessage } from "./result-message";
 import { Sidebar } from "./sidebar";
-import { TargetPicker } from "./target-picker";
+import { Thinking } from "./thinking";
 
 const ease = [0.23, 1, 0.32, 1] as const;
 
@@ -36,10 +41,15 @@ function buildMessages(entry: HistoryEntry): UIMessage[] {
 }
 
 export function PromptLab() {
-  const [targetId, setTargetId] = useState(TARGETS[0].id);
+  const [targetId, setTargetId] = useState<string>(AUTO_TARGET_ID);
+  const [language, setLanguage] = useState<PromptLanguage>("auto");
   const [activeId, setActiveId] = useState<string | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const sessionRef = useRef({ input: "", targetId: TARGETS[0].id, activeId: null as string | null });
+  const sessionRef = useRef({
+    input: "",
+    targetId: AUTO_TARGET_ID as string,
+    activeId: null as string | null,
+  });
 
   const history = useSyncExternalStore(
     historyStore.subscribe,
@@ -67,6 +77,8 @@ export function PromptLab() {
   const busy = status === "submitted" || status === "streaming";
   const hasThread = messages.length > 0;
   const target = getTarget(targetId);
+  const waitingFirstToken =
+    busy && messages[messages.length - 1]?.role === "user";
 
   function handleSubmit(text: string, attachment: Attachment | null) {
     sessionRef.current = { input: text, targetId, activeId };
@@ -86,7 +98,7 @@ export function PromptLab() {
           { type: "text" as const, text },
         ],
       },
-      { body: { targetId } },
+      { body: { targetId, language } },
     );
   }
 
@@ -161,7 +173,7 @@ export function PromptLab() {
           <button
             type="button"
             onClick={() => setSidebarOpen(true)}
-            aria-label="Open threads"
+            aria-label="Abrir hilos"
             className="pressable cursor-pointer border border-line px-2.5 py-1 text-sm text-muted"
           >
             ☰
@@ -177,19 +189,27 @@ export function PromptLab() {
               transition={{ duration: 0.35, ease }}
             >
               <p className="font-mono text-[11px] uppercase tracking-[0.2em] text-faint">
-                Prompt workbench — text · image · video
+                Taller de prompts — texto · imagen · video
               </p>
               <h1 className="mt-3 max-w-2xl text-balance text-3xl leading-[1.1] tracking-tight text-ink sm:text-4xl 2xl:text-5xl">
-                A rough idea becomes a{" "}
-                <span className="font-serif-display">precise instruction.</span>
+                Una idea cruda se vuelve una{" "}
+                <span className="font-serif-display">
+                  instrucción precisa.
+                </span>
               </h1>
               <p className="mt-4 max-w-md text-sm leading-relaxed text-muted">
-                Write it, dictate it, or drop a reference image. Then keep
-                talking to refine it — every version is saved.
+                Escribila, dictala o subí una imagen de referencia. La IA
+                detecta a qué modelo va tu prompt y lo reescribe con técnicas
+                probadas. Después seguí conversando para refinarlo.
               </p>
 
-              <div className="mt-10 grid gap-10 xl:grid-cols-[240px_minmax(0,1fr)]">
-                <TargetPicker targetId={targetId} onChange={setTargetId} />
+              <div className="mt-10 flex flex-col gap-6">
+                <Controls
+                  targetId={targetId}
+                  language={language}
+                  onTargetChange={setTargetId}
+                  onLanguageChange={setLanguage}
+                />
                 <Composer disabled={busy} onSubmit={handleSubmit} />
               </div>
             </motion.div>
@@ -199,14 +219,14 @@ export function PromptLab() {
             <div className="flex flex-col gap-6 pb-28">
               <div className="flex items-baseline justify-between border-b border-line pb-3">
                 <span className="font-mono text-[11px] uppercase tracking-[0.2em] text-faint">
-                  Thread · {target?.label}
+                  Hilo · {target?.label ?? "Detección automática"}
                 </span>
                 <button
                   type="button"
                   onClick={handleNew}
                   className="pressable cursor-pointer text-[13px] text-muted transition-colors duration-200 hover:text-ink"
                 >
-                  + New prompt
+                  + Nuevo prompt
                 </button>
               </div>
 
@@ -234,10 +254,12 @@ export function PromptLab() {
                 );
               })}
 
+              {waitingFirstToken && <Thinking />}
+
               {error && (
                 <p className="text-sm text-red-600">
-                  Something went wrong: {error.message}. Groq may be
-                  rate-limited — try again in a minute.
+                  Algo salió mal: {error.message}. Groq puede estar limitando
+                  requests — intentá de nuevo en un minuto.
                 </p>
               )}
 
@@ -249,7 +271,7 @@ export function PromptLab() {
 
           {!hasThread && error && (
             <p className="mt-4 text-sm text-red-600">
-              Something went wrong: {error.message}. Try again.
+              Algo salió mal: {error.message}. Intentá de nuevo.
             </p>
           )}
         </div>

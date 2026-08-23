@@ -20,7 +20,7 @@ export async function POST(req: Request) {
   }
 
   const target = getTarget(parsed.data.targetId);
-  if (!target || target.category !== "text") {
+  if (parsed.data.targetId !== "auto" && target?.category !== "text") {
     return Response.json(
       { error: "Test runs are only available for text targets" },
       { status: 400 },

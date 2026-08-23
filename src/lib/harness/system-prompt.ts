@@ -1,5 +1,9 @@
-import { getTarget } from "./targets";
+import { TARGETS, getTarget } from "./targets";
 import type { TargetModel } from "./types";
+
+export const AUTO_TARGET_ID = "auto";
+
+export type PromptLanguage = "auto" | "es" | "en";
 
 const IDENTITY = `You are PromptLab, an elite prompt engineer. You transform raw ideas
 (text, voice transcripts, or image descriptions) into production-grade prompts for a
@@ -61,6 +65,39 @@ Rules:
 - If the user's idea is genuinely too vague to optimize, produce your best version
   anyway and list what information would improve it.`;
 
+function autoBlock(): string {
+  const catalog = TARGETS.map(
+    (t) =>
+      `### ${t.label} (${t.category})\n${t.guidelines.map((g) => `- ${g}`).join("\n")}\nShape: ${t.outputShape}`,
+  ).join("\n\n");
+  return `Target model: AUTO-DETECT.
+
+The user did not pick a target model. Infer the most suitable one from their idea:
+- Wants an image generated -> pick the best image target for the described style.
+- Wants a video/animation -> pick the video target.
+- Anything else (assistants, writing, code, analysis) -> pick the best text target.
+
+You MUST start your response with this line, before everything else:
+**Target:** <the exact label of the model you chose>
+
+Then apply that target's technique rules from the catalog below.
+
+${catalog}`;
+}
+
+function languageBlock(language: PromptLanguage): string {
+  if (language === "es") {
+    return `\nPrompt language override: write the optimized prompt itself in Spanish,
+even for image/video targets. If English would perform better for that target,
+say so briefly in the tips section, but still deliver Spanish.`;
+  }
+  if (language === "en") {
+    return `\nPrompt language override: write the optimized prompt itself in English,
+regardless of the language the user wrote in.`;
+  }
+  return "";
+}
+
 function targetBlock(target: TargetModel): string {
   const rules = target.guidelines.map((g) => `- ${g}`).join("\n");
   return `Target model: ${target.label} (${target.vendor}, category: ${target.category}).
@@ -76,13 +113,21 @@ ${target.outputShape}`;
  * Builds the optimizer system prompt. Static identity goes first so provider
  * prompt caching (prefix-match) can reuse it across requests.
  */
-export function buildSystemPrompt(targetId: string, goal?: string): string {
+export function buildSystemPrompt(
+  targetId: string,
+  goal?: string,
+  language: PromptLanguage = "auto",
+): string {
+  const base = `${IDENTITY}\n\n${CLARIFY_PROTOCOL}\n\n${OUTPUT_CONTRACT}`;
+  const goalBlock = goal?.trim()
+    ? `\nThe user's stated goal for this prompt: ${goal.trim()}`
+    : "";
+  if (targetId === AUTO_TARGET_ID) {
+    return `${base}\n\n${autoBlock()}${languageBlock(language)}${goalBlock}`;
+  }
   const target = getTarget(targetId);
   if (!target) {
     throw new Error(`Unknown target model: ${targetId}`);
   }
-  const goalBlock = goal?.trim()
-    ? `\nThe user's stated goal for this prompt: ${goal.trim()}`
-    : "";
-  return `${IDENTITY}\n\n${CLARIFY_PROTOCOL}\n\n${OUTPUT_CONTRACT}\n\n${targetBlock(target)}${goalBlock}`;
+  return `${base}\n\n${targetBlock(target)}${languageBlock(language)}${goalBlock}`;
 }

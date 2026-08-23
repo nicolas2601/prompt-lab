@@ -36,11 +36,11 @@ export function Composer({ disabled, compact = false, onSubmit }: ComposerProps)
     setImageError(null);
     if (!file) return;
     if (!file.type.startsWith("image/")) {
-      setImageError("Only image files are supported");
+      setImageError("Solo se aceptan imágenes");
       return;
     }
     if (file.size > MAX_IMAGE_BYTES) {
-      setImageError("Image too large (max 3 MB)");
+      setImageError("Imagen muy grande (máx 3 MB)");
       return;
     }
     const reader = new FileReader();
@@ -72,8 +72,8 @@ export function Composer({ disabled, compact = false, onSubmit }: ComposerProps)
         rows={compact ? 2 : 5}
         placeholder={
           compact
-            ? "Refine it: shorter, different tone, answer a question..."
-            : "Describe your idea in plain words. Dictate it, or drop a reference image."
+            ? "Refinalo: más corto, otro tono, respondé una pregunta..."
+            : "Describí tu idea con tus palabras. Dictala o subí una imagen de referencia."
         }
         className="w-full resize-none bg-transparent px-4 pt-4 text-[15px] leading-relaxed text-ink outline-none placeholder:text-faint"
       />
@@ -132,10 +132,10 @@ export function Composer({ disabled, compact = false, onSubmit }: ComposerProps)
               }`}
             />
             {recorder.state === "recording"
-              ? "Stop"
+              ? "Detener"
               : recorder.state === "transcribing"
-                ? "Transcribing..."
-                : "Dictate"}
+                ? "Transcribiendo..."
+                : "Dictar"}
           </button>
 
           <button
@@ -144,7 +144,7 @@ export function Composer({ disabled, compact = false, onSubmit }: ComposerProps)
             disabled={disabled}
             className="pressable h-8 cursor-pointer px-2.5 text-[13px] text-muted transition-colors duration-200 hover:text-ink disabled:opacity-40"
           >
-            Attach image
+            Adjuntar imagen
           </button>
           <input
             ref={fileInputRef}
@@ -161,7 +161,7 @@ export function Composer({ disabled, compact = false, onSubmit }: ComposerProps)
           disabled={!canSubmit}
           className="pressable h-8 cursor-pointer bg-ink px-4 text-[13px] font-medium text-background transition-opacity duration-200 disabled:opacity-25"
         >
-          {compact ? "Send" : "Optimize →"}
+          {compact ? "Enviar" : "Optimizar →"}
         </button>
       </div>
 

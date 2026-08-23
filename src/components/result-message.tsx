@@ -2,7 +2,7 @@
 
 import { motion } from "motion/react";
 import { Fragment, useState } from "react";
-import { getTarget } from "@/lib/harness";
+import { TARGETS, getTarget } from "@/lib/harness";
 import { RunPanel } from "./run-panel";
 
 interface ResultMessageProps {
@@ -32,26 +32,30 @@ function parseResponse(text: string): {
   blocks: PromptBlock[];
   questions: Question[];
   commentary: string;
+  detectedTarget: string | null;
 } {
   const blocks: PromptBlock[] = [];
   let commentary = text;
 
+  const targetMatch = commentary.match(/^\*\*Target:\*\*\s*(.+)$/m);
+  const detectedTarget = targetMatch?.[1]?.trim() ?? null;
+  if (targetMatch) commentary = commentary.replace(targetMatch[0], "");
+
   const codeRegex = /```(?:text|txt)?\n([\s\S]*?)(?:```|$)/g;
   let match: RegExpExecArray | null;
   let index = 0;
-  while ((match = codeRegex.exec(text)) !== null) {
+  while ((match = codeRegex.exec(commentary)) !== null) {
     blocks.push({
-      label: index === 0 ? "Optimized prompt" : "Variant",
+      label: index === 0 ? "Prompt optimizado" : "Variante",
       content: match[1].trimEnd(),
     });
-    commentary = commentary.replace(match[0], "");
     index += 1;
   }
+  commentary = commentary.replace(codeRegex, "");
 
   const questions: Question[] = [];
-  if (/^## Questions/m.test(commentary)) {
-    const lines = commentary.split("\n");
-    for (const line of lines) {
+  if (/^## Questions/m.test(commentary) && blocks.length === 0) {
+    for (const line of commentary.split("\n")) {
       const q = line.match(/^\s*\d+\.\s+(.*?)(?:\s*Options:\s*(.*))?$/);
       if (q?.[1]) {
         questions.push({
@@ -72,7 +76,17 @@ function parseResponse(text: string): {
       .trim();
   }
 
-  return { blocks, questions, commentary };
+  return { blocks, questions, commentary, detectedTarget };
+}
+
+/** Decides whether the optimized prompt can be executed against a text model. */
+function canRunPrompt(targetId: string, detectedTarget: string | null): boolean {
+  const manual = getTarget(targetId);
+  if (manual) return manual.category === "text";
+  if (!detectedTarget) return false;
+  return TARGETS.some(
+    (t) => t.category === "text" && detectedTarget.includes(t.label),
+  );
 }
 
 /** Minimal markdown: ## headings, bullets, **bold**. Enough for our contract. */
@@ -129,7 +143,7 @@ function CopyButton({ value }: { value: string }) {
       }}
       className="pressable cursor-pointer px-2 py-1 text-xs text-background/60 transition-colors duration-200 hover:text-background"
     >
-      {copied ? "Copied" : "Copy"}
+      {copied ? "Copiado" : "Copiar"}
     </button>
   );
 }
@@ -149,7 +163,7 @@ function ExportButton({ content }: { content: string }) {
       }}
       className="pressable cursor-pointer px-2 py-1 text-xs text-background/60 transition-colors duration-200 hover:text-background"
     >
-      Export
+      Exportar
     </button>
   );
 }
@@ -161,8 +175,7 @@ export function ResultMessage({
   version,
   onAnswer,
 }: ResultMessageProps) {
-  const { blocks, questions, commentary } = parseResponse(text);
-  const isText = getTarget(targetId)?.category === "text";
+  const { blocks, questions, commentary, detectedTarget } = parseResponse(text);
 
   return (
     <motion.div
@@ -171,10 +184,17 @@ export function ResultMessage({
       transition={{ duration: 0.25, ease: [0.23, 1, 0.32, 1] }}
       className="flex flex-col gap-4"
     >
+      {detectedTarget && (
+        <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-faint">
+          Modelo detectado:{" "}
+          <span className="text-ink">{detectedTarget}</span>
+        </p>
+      )}
+
       {questions.length > 0 && (
         <div className="border border-line-strong bg-surface p-4">
           <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-faint">
-            Quick questions before optimizing
+            Preguntas rápidas antes de optimizar
           </p>
           <div className="flex flex-col gap-3">
             {questions.map((q, i) => (
@@ -196,7 +216,7 @@ export function ResultMessage({
             ))}
           </div>
           <p className="mt-3 text-xs text-faint">
-            Tap an option or answer in your own words below.
+            Tocá una opción o respondé con tus palabras abajo.
           </p>
         </div>
       )}
@@ -208,7 +228,7 @@ export function ResultMessage({
               <span className="text-[11px] font-medium uppercase tracking-[0.14em] text-background/70">
                 {block.label}
               </span>
-              {block.label === "Optimized prompt" && (
+              {i === 0 && (
                 <span className="font-mono text-[11px] text-background/40">
                   v{version} · ≈{estimateTokens(block.content)} tokens
                 </span>
@@ -237,7 +257,7 @@ export function ResultMessage({
         </div>
       )}
 
-      {!streaming && isText && blocks[0] && (
+      {!streaming && blocks[0] && canRunPrompt(targetId, detectedTarget) && (
         <RunPanel prompt={blocks[0].content} targetId={targetId} />
       )}
     </motion.div>

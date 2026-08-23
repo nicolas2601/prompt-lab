@@ -34,18 +34,18 @@ export function Sidebar({
           onClick={onNew}
           className="pressable w-full cursor-pointer border border-ink bg-ink px-3 py-2 text-left text-[13px] font-medium text-background transition-opacity duration-200 hover:opacity-85"
         >
-          + New prompt
+          + Nuevo prompt
         </button>
       </div>
 
       <div className="min-h-0 flex-1 overflow-y-auto px-3 pb-4">
         <p className="px-2 pb-2 text-[11px] font-medium uppercase tracking-[0.14em] text-faint">
-          Threads
+          Hilos
         </p>
         {entries.length === 0 && (
           <p className="px-2 text-xs leading-relaxed text-faint">
-            Your prompt threads live here, saved in this browser. Each one is a
-            conversation you can keep refining.
+            Tus prompts viven acá, guardados en este navegador. Cada uno es una
+            conversación que podés seguir refinando.
           </p>
         )}
         <AnimatePresence initial={false}>
@@ -74,7 +74,7 @@ export function Sidebar({
                     {entryTitle(entry)}
                   </span>
                   <span className="mt-0.5 block font-mono text-[10px] uppercase tracking-wider text-faint">
-                    {target?.label ?? entry.targetId} ·{" "}
+                    {target?.label ?? "Auto"} ·{" "}
                     {entry.exchanges.length > 1
                       ? `v${entry.exchanges.length}`
                       : "v1"}
@@ -82,7 +82,7 @@ export function Sidebar({
                 </button>
                 <button
                   type="button"
-                  aria-label="Delete thread"
+                  aria-label="Borrar hilo"
                   onClick={() => onDelete(entry.id)}
                   className="pressable absolute right-2 top-2 hidden cursor-pointer text-xs text-faint hover:text-red-600 group-hover:block"
                 >
