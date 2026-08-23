@@ -12,7 +12,7 @@ import { buildSystemPrompt, getTarget } from "@/lib/harness";
 export const maxDuration = 300;
 
 const TEXT_MODEL = "openai/gpt-oss-120b";
-const VISION_MODEL = "meta-llama/llama-4-scout-17b-16e-instruct";
+const VISION_MODEL = "qwen/qwen3.6-27b";
 
 const bodySchema = z.object({
   messages: z.array(z.custom<UIMessage>()),
@@ -45,6 +45,9 @@ export async function POST(req: Request) {
     model: groq(model),
     system: buildSystemPrompt(targetId, goal),
     messages: await convertToModelMessages(messages),
+    providerOptions: {
+      groq: { reasoningFormat: "parsed" },
+    },
   });
 
   return createUIMessageStreamResponse({
