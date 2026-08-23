@@ -1,16 +1,17 @@
 @import "tailwindcss";
 
 :root {
-  --background: #0b0c0a;
-  --surface: #131511;
-  --surface-2: #1a1d17;
-  --foreground: #f2f4ee;
-  --muted: #9aa093;
-  --faint: #62685c;
-  --accent: #c9f24b;
-  --accent-dim: rgba(201, 242, 75, 0.14);
+  --background: #07090e;
+  --surface: #0d1017;
+  --surface-2: #131722;
+  --foreground: #eef1f8;
+  --muted: #99a1b3;
+  --faint: #5c6475;
+  --accent: #34e0f7;
+  --accent-2: #8b7cf6;
+  --accent-dim: rgba(52, 224, 247, 0.12);
   --border-subtle: rgba(255, 255, 255, 0.07);
-  --border-default: rgba(255, 255, 255, 0.12);
+  --border-default: rgba(255, 255, 255, 0.13);
   --ease-out-strong: cubic-bezier(0.23, 1, 0.32, 1);
 }
 
@@ -22,6 +23,7 @@
   --color-muted: var(--muted);
   --color-faint: var(--faint);
   --color-accent: var(--accent);
+  --color-accent-2: var(--accent-2);
   --color-accent-dim: var(--accent-dim);
   --color-line: var(--border-subtle);
   --color-line-strong: var(--border-default);
@@ -41,7 +43,7 @@ body {
 
 ::selection {
   background: var(--accent);
-  color: #10120c;
+  color: #06121a;
 }
 
 ::-webkit-scrollbar {
@@ -56,22 +58,56 @@ body {
   border-radius: 999px;
 }
 
+/* Atmospheric glows: two soft radial fields, palette-matched, low chroma. */
+.atmosphere::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background:
+    radial-gradient(
+      600px 400px at 85% -10%,
+      rgba(139, 124, 246, 0.14),
+      transparent 70%
+    ),
+    radial-gradient(
+      700px 500px at -10% 30%,
+      rgba(52, 224, 247, 0.08),
+      transparent 70%
+    );
+}
+
+/* Subtle grain so large dark surfaces do not band. */
+.atmosphere::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.3;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.04 0'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+.gradient-text {
+  background: linear-gradient(100deg, var(--accent) 10%, var(--accent-2) 90%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.glass {
+  background: rgba(255, 255, 255, 0.03);
+  backdrop-filter: blur(14px);
+  border: 1px solid var(--border-subtle);
+}
+
 /* Press feedback: every pressable element responds to touch. */
 .pressable {
   transition: transform 160ms var(--ease-out-strong);
 }
 .pressable:active {
   transform: scale(0.97);
-}
-
-/* Subtle grain so large dark surfaces do not band. */
-.grain::before {
-  content: "";
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  opacity: 0.35;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.04 0'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)'/%3E%3C/svg%3E");
 }
 
 @media (prefers-reduced-motion: reduce) {

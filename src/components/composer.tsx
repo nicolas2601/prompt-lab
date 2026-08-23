@@ -154,7 +154,7 @@ export function Composer({ disabled, onSubmit }: ComposerProps) {
           type="button"
           onClick={submit}
           disabled={!canSubmit}
-          className="pressable h-9 rounded-full bg-accent px-5 text-sm font-semibold text-background transition-opacity duration-200 disabled:opacity-30"
+          className="pressable h-9 rounded-full bg-gradient-to-r from-accent to-accent-2 px-5 text-sm font-semibold text-background transition-opacity duration-200 disabled:opacity-30"
         >
           Optimize
         </button>
