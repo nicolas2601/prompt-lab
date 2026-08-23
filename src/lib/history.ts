@@ -1,31 +1,69 @@
-export interface HistoryEntry {
-  id: string;
-  createdAt: number;
-  targetId: string;
+export interface Exchange {
   input: string;
   output: string;
 }
 
-const STORAGE_KEY = "promptlab:history:v1";
+export interface HistoryEntry {
+  id: string;
+  createdAt: number;
+  targetId: string;
+  exchanges: Exchange[];
+}
+
+const STORAGE_KEY = "promptlab:history:v2";
+const LEGACY_KEY = "promptlab:history:v1";
 const MAX_ENTRIES = 100;
 const EMPTY: HistoryEntry[] = [];
 
+function isExchange(value: unknown): value is Exchange {
+  if (typeof value !== "object" || value === null) return false;
+  const e = value as Record<string, unknown>;
+  return typeof e.input === "string" && typeof e.output === "string";
+}
+
 function isEntry(value: unknown): value is HistoryEntry {
   if (typeof value !== "object" || value === null) return false;
-  const entry = value as Record<string, unknown>;
+  const e = value as Record<string, unknown>;
   return (
-    typeof entry.id === "string" &&
-    typeof entry.createdAt === "number" &&
-    typeof entry.targetId === "string" &&
-    typeof entry.input === "string" &&
-    typeof entry.output === "string"
+    typeof e.id === "string" &&
+    typeof e.createdAt === "number" &&
+    typeof e.targetId === "string" &&
+    Array.isArray(e.exchanges) &&
+    e.exchanges.every(isExchange)
   );
+}
+
+function migrateLegacy(): HistoryEntry[] {
+  try {
+    const raw = window.localStorage.getItem(LEGACY_KEY);
+    if (!raw) return EMPTY;
+    const parsed: unknown = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return EMPTY;
+    const migrated = parsed
+      .filter(
+        (v): v is Record<string, string | number> =>
+          typeof v === "object" && v !== null,
+      )
+      .filter(
+        (v) => typeof v.input === "string" && typeof v.output === "string",
+      )
+      .map((v) => ({
+        id: String(v.id ?? crypto.randomUUID()),
+        createdAt: Number(v.createdAt ?? Date.now()),
+        targetId: String(v.targetId ?? "claude"),
+        exchanges: [{ input: String(v.input), output: String(v.output) }],
+      }));
+    window.localStorage.removeItem(LEGACY_KEY);
+    return migrated;
+  } catch {
+    return EMPTY;
+  }
 }
 
 function readStorage(): HistoryEntry[] {
   try {
     const raw = window.localStorage.getItem(STORAGE_KEY);
-    if (!raw) return EMPTY;
+    if (!raw) return migrateLegacy();
     const parsed: unknown = JSON.parse(raw);
     if (!Array.isArray(parsed)) return EMPTY;
     return parsed.filter(isEntry);
@@ -34,10 +72,6 @@ function readStorage(): HistoryEntry[] {
   }
 }
 
-/**
- * Tiny external store over localStorage so React components can consume
- * history via useSyncExternalStore without effects or hydration mismatches.
- */
 let cache: HistoryEntry[] | null = null;
 const listeners = new Set<() => void>();
 
@@ -67,21 +101,36 @@ export const historyStore = {
   getServerSnapshot(): HistoryEntry[] {
     return EMPTY;
   },
-  add(entry: Omit<HistoryEntry, "id" | "createdAt">): HistoryEntry {
-    const full: HistoryEntry = {
-      ...entry,
+  create(targetId: string, exchange: Exchange): HistoryEntry {
+    const entry: HistoryEntry = {
       id: crypto.randomUUID(),
       createdAt: Date.now(),
+      targetId,
+      exchanges: [exchange],
     };
-    setEntries([full, ...historyStore.getSnapshot()].slice(0, MAX_ENTRIES));
-    return full;
+    setEntries([entry, ...historyStore.getSnapshot()].slice(0, MAX_ENTRIES));
+    return entry;
+  },
+  appendExchange(id: string, exchange: Exchange): void {
+    setEntries(
+      historyStore
+        .getSnapshot()
+        .map((entry) =>
+          entry.id === id
+            ? { ...entry, exchanges: [...entry.exchanges, exchange] }
+            : entry,
+        ),
+    );
   },
   remove(id: string): void {
     setEntries(historyStore.getSnapshot().filter((entry) => entry.id !== id));
   },
+  find(id: string): HistoryEntry | undefined {
+    return historyStore.getSnapshot().find((entry) => entry.id === id);
+  },
 };
 
 export function entryTitle(entry: HistoryEntry): string {
-  const clean = entry.input.replace(/\s+/g, " ").trim();
+  const clean = entry.exchanges[0]?.input.replace(/\s+/g, " ").trim() ?? "";
   return clean.length > 60 ? `${clean.slice(0, 60)}…` : clean || "Untitled";
 }

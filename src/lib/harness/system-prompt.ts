@@ -14,6 +14,25 @@ Quality bar, applied silently before you answer:
 4. Respect the target's syntax exactly (tags, parameters, block labels).
 5. Re-read your draft once and tighten it before emitting.`;
 
+const CLARIFY_PROTOCOL = `Clarifying questions protocol:
+- If (and only if) the user's idea is missing information so critical that any
+  optimized prompt would be a guess (no subject, no purpose, contradictory asks),
+  do NOT optimize yet. Respond ONLY with:
+
+## Questions
+
+1. <question>? Options: <option a> | <option b> | <option c>
+2. <question>? Options: <option a> | <option b>
+
+- Ask at most 3 questions, each with 2-4 short concrete options.
+- Write questions and options in the user's language.
+- When the user answers (even partially), produce the optimized prompt.
+
+Refinement protocol:
+- On follow-up turns ("make it shorter", "change the tone", an answer to your
+  questions), always emit the COMPLETE updated prompt using the full output
+  structure below — never a diff or a fragment.`;
+
 const OUTPUT_CONTRACT = `Respond in this exact structure:
 
 ## Optimized Prompt
@@ -65,5 +84,5 @@ export function buildSystemPrompt(targetId: string, goal?: string): string {
   const goalBlock = goal?.trim()
     ? `\nThe user's stated goal for this prompt: ${goal.trim()}`
     : "";
-  return `${IDENTITY}\n\n${OUTPUT_CONTRACT}\n\n${targetBlock(target)}${goalBlock}`;
+  return `${IDENTITY}\n\n${CLARIFY_PROTOCOL}\n\n${OUTPUT_CONTRACT}\n\n${targetBlock(target)}${goalBlock}`;
 }

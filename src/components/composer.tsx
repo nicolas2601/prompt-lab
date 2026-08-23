@@ -13,12 +13,13 @@ export interface Attachment {
 
 interface ComposerProps {
   disabled: boolean;
+  compact?: boolean;
   onSubmit: (text: string, attachment: Attachment | null) => void;
 }
 
 const MAX_IMAGE_BYTES = 3 * 1024 * 1024;
 
-export function Composer({ disabled, onSubmit }: ComposerProps) {
+export function Composer({ disabled, compact = false, onSubmit }: ComposerProps) {
   const [text, setText] = useState("");
   const [attachment, setAttachment] = useState<Attachment | null>(null);
   const [imageError, setImageError] = useState<string | null>(null);
@@ -61,34 +62,38 @@ export function Composer({ disabled, onSubmit }: ComposerProps) {
   }
 
   return (
-    <div className="rounded-2xl border border-line bg-surface p-3">
+    <div className="border border-line-strong bg-surface">
       <textarea
         value={text}
         onChange={(e) => setText(e.target.value)}
         onKeyDown={(e) => {
           if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) submit();
         }}
-        rows={4}
-        placeholder="Describe your idea in plain words... or dictate it, or drop a reference image."
-        className="w-full resize-none bg-transparent text-[15px] leading-relaxed outline-none placeholder:text-faint"
+        rows={compact ? 2 : 5}
+        placeholder={
+          compact
+            ? "Refine it: shorter, different tone, answer a question..."
+            : "Describe your idea in plain words. Dictate it, or drop a reference image."
+        }
+        className="w-full resize-none bg-transparent px-4 pt-4 text-[15px] leading-relaxed text-ink outline-none placeholder:text-faint"
       />
 
       <AnimatePresence>
         {attachment && (
           <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
+            initial={{ opacity: 0, scale: 0.96 }}
             animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.95 }}
+            exit={{ opacity: 0, scale: 0.96 }}
             transition={{ duration: 0.18, ease: [0.23, 1, 0.32, 1] }}
-            className="mb-2 flex items-center gap-2 self-start rounded-lg border border-line bg-surface-2 p-1.5 pr-3"
+            className="mx-4 mb-1 flex items-center gap-2 self-start border border-line bg-surface-2 p-1.5 pr-3"
           >
             <Image
               src={attachment.dataUrl}
               alt={attachment.name}
-              width={36}
-              height={36}
+              width={32}
+              height={32}
               unoptimized
-              className="h-9 w-9 rounded-md object-cover"
+              className="h-8 w-8 object-cover"
             />
             <span className="max-w-40 truncate text-xs text-muted">
               {attachment.name}
@@ -96,7 +101,7 @@ export function Composer({ disabled, onSubmit }: ComposerProps) {
             <button
               type="button"
               onClick={() => setAttachment(null)}
-              className="pressable text-xs text-faint hover:text-foreground"
+              className="pressable cursor-pointer text-xs text-faint hover:text-ink"
               aria-label="Remove image"
             >
               ✕
@@ -105,24 +110,24 @@ export function Composer({ disabled, onSubmit }: ComposerProps) {
         )}
       </AnimatePresence>
 
-      <div className="flex items-center justify-between gap-2 border-t border-line pt-3">
-        <div className="flex items-center gap-1.5">
+      <div className="flex items-center justify-between gap-2 border-t border-line px-3 py-2.5">
+        <div className="flex items-center gap-1">
           <button
             type="button"
             onClick={() =>
               recorder.state === "recording" ? recorder.stop() : recorder.start()
             }
             disabled={disabled || recorder.state === "transcribing"}
-            className={`pressable flex h-9 items-center gap-2 rounded-full border px-3.5 text-sm transition-colors duration-200 disabled:opacity-40 ${
+            className={`pressable flex h-8 cursor-pointer items-center gap-2 px-2.5 text-[13px] transition-colors duration-200 disabled:opacity-40 ${
               recorder.state === "recording"
-                ? "border-red-500/50 bg-red-500/10 text-red-400"
-                : "border-line text-muted hover:border-line-strong hover:text-foreground"
+                ? "text-red-600"
+                : "text-muted hover:text-ink"
             }`}
           >
             <span
-              className={`h-2 w-2 rounded-full ${
+              className={`h-1.5 w-1.5 rounded-full ${
                 recorder.state === "recording"
-                  ? "animate-pulse bg-red-400"
+                  ? "animate-pulse bg-red-500"
                   : "bg-faint"
               }`}
             />
@@ -137,7 +142,7 @@ export function Composer({ disabled, onSubmit }: ComposerProps) {
             type="button"
             onClick={() => fileInputRef.current?.click()}
             disabled={disabled}
-            className="pressable flex h-9 items-center rounded-full border border-line px-3.5 text-sm text-muted transition-colors duration-200 hover:border-line-strong hover:text-foreground disabled:opacity-40"
+            className="pressable h-8 cursor-pointer px-2.5 text-[13px] text-muted transition-colors duration-200 hover:text-ink disabled:opacity-40"
           >
             Attach image
           </button>
@@ -154,14 +159,14 @@ export function Composer({ disabled, onSubmit }: ComposerProps) {
           type="button"
           onClick={submit}
           disabled={!canSubmit}
-          className="pressable h-9 rounded-full bg-gradient-to-r from-accent to-accent-2 px-5 text-sm font-semibold text-background transition-opacity duration-200 disabled:opacity-30"
+          className="pressable h-8 cursor-pointer bg-ink px-4 text-[13px] font-medium text-background transition-opacity duration-200 disabled:opacity-25"
         >
-          Optimize
+          {compact ? "Send" : "Optimize →"}
         </button>
       </div>
 
       {(recorder.error ?? imageError) && (
-        <p className="mt-2 text-xs text-red-400">
+        <p className="px-4 pb-3 text-xs text-red-600">
           {recorder.error ?? imageError}
         </p>
       )}
