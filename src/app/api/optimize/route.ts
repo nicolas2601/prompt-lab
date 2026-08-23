@@ -7,7 +7,7 @@ import {
   type UIMessage,
 } from "ai";
 import { z } from "zod";
-import { buildSystemPrompt, getTarget } from "@/lib/harness";
+import { AUTO_TARGET_ID, buildSystemPrompt, getTarget } from "@/lib/harness";
 
 export const maxDuration = 300;
 
@@ -18,6 +18,7 @@ const bodySchema = z.object({
   messages: z.array(z.custom<UIMessage>()),
   targetId: z.string().min(1),
   goal: z.string().optional(),
+  language: z.enum(["auto", "es", "en"]).optional(),
 });
 
 function hasImageParts(messages: UIMessage[]): boolean {
@@ -34,8 +35,8 @@ export async function POST(req: Request) {
     return Response.json({ error: "Invalid request body" }, { status: 400 });
   }
 
-  const { messages, targetId, goal } = parsed.data;
-  if (!getTarget(targetId)) {
+  const { messages, targetId, goal, language } = parsed.data;
+  if (targetId !== AUTO_TARGET_ID && !getTarget(targetId)) {
     return Response.json({ error: "Unknown target model" }, { status: 400 });
   }
 
@@ -43,7 +44,7 @@ export async function POST(req: Request) {
 
   const result = streamText({
     model: groq(model),
-    system: buildSystemPrompt(targetId, goal),
+    system: buildSystemPrompt(targetId, goal, language),
     messages: await convertToModelMessages(messages),
     providerOptions: {
       groq: { reasoningFormat: "parsed" },

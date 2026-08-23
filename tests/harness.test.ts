@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { TARGETS, getTarget, buildSystemPrompt } from "@/lib/harness";
+import {
+  TARGETS,
+  getTarget,
+  buildSystemPrompt,
+  AUTO_TARGET_ID,
+} from "@/lib/harness";
 
 describe("target registry", () => {
   it("exposes text, image and video categories", () => {
@@ -52,5 +57,35 @@ describe("buildSystemPrompt", () => {
   it("forbids manual chain-of-thought for reasoning models", () => {
     expect(buildSystemPrompt("gpt")).toContain("think step by step");
     expect(buildSystemPrompt("claude")).toContain("adaptively");
+  });
+
+  it("includes the clarifying questions and refinement protocols", () => {
+    const prompt = buildSystemPrompt("claude");
+    expect(prompt).toContain("## Questions");
+    expect(prompt).toContain("Refinement protocol");
+    expect(prompt).toContain("COMPLETE updated prompt");
+  });
+
+  it("requires a variant for image and video targets", () => {
+    expect(buildSystemPrompt("midjourney")).toContain("## Variant");
+  });
+
+  it("auto mode includes the full catalog and detection contract", () => {
+    const prompt = buildSystemPrompt(AUTO_TARGET_ID);
+    expect(prompt).toContain("AUTO-DETECT");
+    expect(prompt).toContain("**Target:**");
+    for (const target of TARGETS) {
+      expect(prompt).toContain(target.label);
+    }
+  });
+
+  it("applies the prompt language override", () => {
+    expect(buildSystemPrompt("claude", undefined, "es")).toContain("Spanish");
+    expect(buildSystemPrompt("claude", undefined, "en")).toContain(
+      "regardless of the language",
+    );
+    expect(buildSystemPrompt("claude", undefined, "auto")).not.toContain(
+      "language override",
+    );
   });
 });
