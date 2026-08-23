@@ -6,6 +6,9 @@ const SHARED_TEXT_RULES = [
   "Include 2-3 few-shot examples only when the format is hard to describe.",
   "Give the model an out: allow it to say it does not know instead of guessing.",
   "Place static/reusable content first so provider prompt caching can kick in.",
+  "Define success criteria: tell the model how a good answer will be judged.",
+  "State what NOT to do (scope boundaries) when the task invites drift.",
+  "For multi-step tasks, number the steps and require them in order.",
 ];
 
 export const TARGETS: TargetModel[] = [
@@ -74,7 +77,9 @@ export const TARGETS: TargetModel[] = [
     guidelines: [
       "Order: subject, action, environment, style/medium, lighting, camera/lens, mood.",
       "Use comma-separated dense phrases, not full sentences or narrative prose.",
+      "Front-load the most important concept; early tokens carry more weight.",
       "Never use negations ('no X'); use --no parameter instead.",
+      "Name concrete artistic references (film stock, art movement, photographer style) over vague adjectives like 'beautiful'.",
       "Append parameters: --ar <ratio>, --stylize <0-1000>, --v <version> when relevant.",
       "Write the prompt in English; Midjourney is trained primarily on English captions.",
     ],
@@ -120,8 +125,10 @@ export const TARGETS: TargetModel[] = [
       "Structure the prompt as labeled blocks: Scene, Subject, Action, Camera, Lighting, Style, Audio.",
       "Describe ONE continuous shot per prompt; chain prompts for multi-shot sequences.",
       "Camera language matters: dolly-in, orbit, crane, handheld, FPV, slow push, rack focus.",
+      "Describe motion with physics: speed, weight, momentum, what moves and what stays still.",
       "Specify duration, aspect ratio, and frame style (e.g. 8s, 16:9, cinematic 35mm).",
       "Include audio/ambience cues for models that generate sound (Veo 3).",
+      "Anchor time of day and weather; they drive the whole color grade.",
       "Write in English.",
     ],
     outputShape:
