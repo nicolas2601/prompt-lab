@@ -68,6 +68,17 @@ describe("buildSystemPrompt", () => {
 
   it("requires a variant for image and video targets", () => {
     expect(buildSystemPrompt("midjourney")).toContain("## Variant");
+    expect(buildSystemPrompt("midjourney")).toContain("<variant>");
+  });
+
+  it("uses tag markers instead of code fences for the prompt block", () => {
+    const prompt = buildSystemPrompt("gpt");
+    expect(prompt).toContain("<optimized_prompt>");
+    expect(prompt).toContain("NEVER wrap the optimized prompt in markdown code fences");
+  });
+
+  it("accepts batched question answers in one message", () => {
+    expect(buildSystemPrompt("gpt")).toContain("one answer per line");
   });
 
   it("auto mode includes the full catalog and detection contract", () => {
