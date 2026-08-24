@@ -1,3 +1,8 @@
+import {
+  pickSkillPacks,
+  pickSkillPacksForAuto,
+  renderSkillPacks,
+} from "./skills";
 import { TARGETS, getTarget } from "./targets";
 import type { TargetModel } from "./types";
 
@@ -111,23 +116,29 @@ ${target.outputShape}`;
 
 /**
  * Builds the optimizer system prompt. Static identity goes first so provider
- * prompt caching (prefix-match) can reuse it across requests.
+ * prompt caching (prefix-match) can reuse it across requests; skill packs are
+ * appended last for the same reason — they vary per request.
  */
 export function buildSystemPrompt(
   targetId: string,
   goal?: string,
   language: PromptLanguage = "auto",
+  ideaText?: string,
 ): string {
   const base = `${IDENTITY}\n\n${CLARIFY_PROTOCOL}\n\n${OUTPUT_CONTRACT}`;
   const goalBlock = goal?.trim()
     ? `\nThe user's stated goal for this prompt: ${goal.trim()}`
     : "";
   if (targetId === AUTO_TARGET_ID) {
-    return `${base}\n\n${autoBlock()}${languageBlock(language)}${goalBlock}`;
+    const packs = renderSkillPacks(pickSkillPacksForAuto(ideaText ?? ""));
+    const packsBlock = packs ? `\n\n${packs}` : "";
+    return `${base}\n\n${autoBlock()}${languageBlock(language)}${goalBlock}${packsBlock}`;
   }
   const target = getTarget(targetId);
   if (!target) {
     throw new Error(`Unknown target model: ${targetId}`);
   }
-  return `${base}\n\n${targetBlock(target)}${languageBlock(language)}${goalBlock}`;
+  const packs = renderSkillPacks(pickSkillPacks(target, ideaText ?? ""));
+  const packsBlock = packs ? `\n\n${packs}` : "";
+  return `${base}\n\n${targetBlock(target)}${languageBlock(language)}${goalBlock}${packsBlock}`;
 }

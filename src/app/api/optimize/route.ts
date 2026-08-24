@@ -21,6 +21,17 @@ const bodySchema = z.object({
   language: z.enum(["auto", "es", "en"]).optional(),
 });
 
+function userIdeaText(messages: UIMessage[]): string {
+  return messages
+    .filter((message) => message.role === "user")
+    .flatMap(
+      (message) =>
+        message.parts?.filter((part) => part.type === "text") ?? [],
+    )
+    .map((part) => ("text" in part ? part.text : ""))
+    .join("\n");
+}
+
 function hasImageParts(messages: UIMessage[]): boolean {
   return messages.some((message) =>
     message.parts?.some(
@@ -44,7 +55,7 @@ export async function POST(req: Request) {
 
   const result = streamText({
     model: groq(model),
-    system: buildSystemPrompt(targetId, goal, language),
+    system: buildSystemPrompt(targetId, goal, language, userIdeaText(messages)),
     messages: await convertToModelMessages(messages),
     providerOptions: {
       groq: { reasoningFormat: "parsed" },
