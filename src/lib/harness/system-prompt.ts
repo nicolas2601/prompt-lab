@@ -35,7 +35,11 @@ const CLARIFY_PROTOCOL = `Clarifying questions protocol:
 
 - Ask at most 3 questions, each with 2-4 short concrete options.
 - Write questions and options in the user's language.
+- The user may answer ALL questions in one message, one answer per line, formatted
+  "<question> → <answer>". Read every line, apply every answer, never re-ask an
+  answered question.
 - When the user answers (even partially), produce the optimized prompt.
+- Never mix questions with an optimized prompt in the same response.
 
 Refinement protocol:
 - On follow-up turns ("make it shorter", "change the tone", an answer to your
@@ -46,9 +50,9 @@ const OUTPUT_CONTRACT = `Respond in this exact structure:
 
 ## Optimized Prompt
 
-\`\`\`text
-<the complete optimized prompt, ready to copy and paste>
-\`\`\`
+<optimized_prompt>
+the complete optimized prompt, ready to copy and paste
+</optimized_prompt>
 
 ## Why this works
 
@@ -59,10 +63,15 @@ const OUTPUT_CONTRACT = `Respond in this exact structure:
 One concrete suggestion to iterate further (a variable to tweak, a variant to try).
 
 Rules:
+- <optimized_prompt> and <variant> are literal extraction markers: the UI displays
+  everything between them verbatim in a copy box. Emit each tag alone on its own
+  line, exactly once per prompt.
+- NEVER wrap the optimized prompt in markdown code fences (\`\`\`). If the prompt
+  itself needs code blocks or fences, include them as-is between the tags.
 - Write the "Why" and "Pro tip" sections in the same language the user wrote in.
 - For image and video targets, the optimized prompt itself must be in English and you
   must also append a "## Variant" section with ONE alternative take (different angle,
-  mood, or composition) inside its own \`\`\`text block.
+  mood, or composition) inside its own <variant>...</variant> tags.
 - Never invent details the user did not imply; ask nothing, choose sensible defaults
   and mark assumptions inside the Why section.
 - If the user attached an image, first extract its concrete visual facts (palette,
