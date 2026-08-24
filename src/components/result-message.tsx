@@ -3,80 +3,20 @@
 import { motion } from "motion/react";
 import { Fragment, useState } from "react";
 import { TARGETS, getTarget } from "@/lib/harness";
+import {
+  estimateTokens,
+  parseResponse,
+  type Question,
+} from "@/lib/parse-response";
 import { RunPanel } from "./run-panel";
 
 interface ResultMessageProps {
   text: string;
   streaming: boolean;
+  interactive: boolean;
   targetId: string;
   version: number;
   onAnswer: (answer: string) => void;
-}
-
-interface PromptBlock {
-  label: string;
-  content: string;
-}
-
-interface Question {
-  question: string;
-  options: string[];
-}
-
-function estimateTokens(text: string): number {
-  return Math.max(1, Math.round(text.length / 4));
-}
-
-/** Splits the optimizer response into prompt blocks, questions and commentary. */
-function parseResponse(text: string): {
-  blocks: PromptBlock[];
-  questions: Question[];
-  commentary: string;
-  detectedTarget: string | null;
-} {
-  const blocks: PromptBlock[] = [];
-  let commentary = text;
-
-  const targetMatch = commentary.match(/^\*\*Target:\*\*\s*(.+)$/m);
-  const detectedTarget = targetMatch?.[1]?.trim() ?? null;
-  if (targetMatch) commentary = commentary.replace(targetMatch[0], "");
-
-  const codeRegex = /```(?:text|txt)?\n([\s\S]*?)(?:```|$)/g;
-  let match: RegExpExecArray | null;
-  let index = 0;
-  while ((match = codeRegex.exec(commentary)) !== null) {
-    blocks.push({
-      label: index === 0 ? "Prompt optimizado" : "Variante",
-      content: match[1].trimEnd(),
-    });
-    index += 1;
-  }
-  commentary = commentary.replace(codeRegex, "");
-
-  const questions: Question[] = [];
-  if (/^## Questions/m.test(commentary) && blocks.length === 0) {
-    for (const line of commentary.split("\n")) {
-      const q = line.match(/^\s*\d+\.\s+(.*?)(?:\s*Options:\s*(.*))?$/);
-      if (q?.[1]) {
-        questions.push({
-          question: q[1].trim(),
-          options:
-            q[2]
-              ?.split("|")
-              .map((o) => o.trim())
-              .filter(Boolean) ?? [],
-        });
-      }
-    }
-    commentary = "";
-  } else {
-    commentary = commentary
-      .replace(/^## Optimized Prompt\s*$/m, "")
-      .replace(/^## Variant\s*$/m, "")
-      .trim();
-  }
-
-  return { blocks, questions, commentary, detectedTarget };
 }
 
 /** Decides whether the optimized prompt can be executed against a text model. */
@@ -89,9 +29,33 @@ function canRunPrompt(targetId: string, detectedTarget: string | null): boolean 
   );
 }
 
-/** Minimal markdown: ## headings, bullets, **bold**. Enough for our contract. */
+function renderInline(content: string, keyPrefix: string) {
+  return content.split(/(\*\*.+?\*\*|`[^`]+`)/g).map((part, j) => {
+    if (part.startsWith("**") && part.endsWith("**")) {
+      return (
+        <strong key={`${keyPrefix}-${j}`} className="font-medium text-ink">
+          {part.slice(2, -2)}
+        </strong>
+      );
+    }
+    if (part.startsWith("`") && part.endsWith("`") && part.length > 2) {
+      return (
+        <code
+          key={`${keyPrefix}-${j}`}
+          className="rounded-sm bg-surface px-1 py-px font-mono text-[12px] text-ink"
+        >
+          {part.slice(1, -1)}
+        </code>
+      );
+    }
+    return <Fragment key={`${keyPrefix}-${j}`}>{part}</Fragment>;
+  });
+}
+
+/** Minimal markdown: ## headings, bullets, ordered lists, **bold**, `code`. */
 function renderCommentary(text: string) {
   return text.split("\n").map((line, i) => {
+    if (/^\s*```/.test(line)) return null;
     const heading = line.match(/^##+\s+(.*)/);
     if (heading) {
       return (
@@ -104,21 +68,14 @@ function renderCommentary(text: string) {
       );
     }
     const bullet = line.match(/^\s*[-*]\s+(.*)/);
-    const content = bullet ? bullet[1] : line;
-    const parts = content.split(/\*\*(.+?)\*\*/g);
-    const rendered = parts.map((part, j) =>
-      j % 2 === 1 ? (
-        <strong key={j} className="font-medium text-ink">
-          {part}
-        </strong>
-      ) : (
-        <Fragment key={j}>{part}</Fragment>
-      ),
-    );
-    if (bullet) {
+    const ordered = line.match(/^\s*(\d+)\.\s+(.*)/);
+    const marker = bullet ? "—" : ordered ? `${ordered[1]}.` : null;
+    const content = bullet ? bullet[1] : ordered ? ordered[2] : line;
+    const rendered = renderInline(content, `l${i}`);
+    if (marker) {
       return (
         <p key={i} className="flex gap-2 py-0.5">
-          <span className="text-faint">—</span>
+          <span className="shrink-0 text-faint">{marker}</span>
           <span>{rendered}</span>
         </p>
       );
@@ -129,6 +86,97 @@ function renderCommentary(text: string) {
       </p>
     ) : null;
   });
+}
+
+interface QuestionsCardProps {
+  questions: Question[];
+  interactive: boolean;
+  onAnswer: (answer: string) => void;
+}
+
+/**
+ * Collects one choice per question locally and submits the whole batch as a
+ * single message — never one request per click.
+ */
+function QuestionsCard({ questions, interactive, onAnswer }: QuestionsCardProps) {
+  const [selected, setSelected] = useState<Record<number, string>>({});
+  const answered = questions.filter((_, i) => selected[i]).length;
+
+  function toggle(i: number, option: string) {
+    if (!interactive) return;
+    setSelected((prev) => ({
+      ...prev,
+      [i]: prev[i] === option ? "" : option,
+    }));
+  }
+
+  function submit() {
+    const answer = questions
+      .map((q, i) => (selected[i] ? `${q.question} → ${selected[i]}` : null))
+      .filter(Boolean)
+      .join("\n");
+    if (answer) onAnswer(answer);
+  }
+
+  return (
+    <div className="border border-line-strong bg-surface p-4">
+      <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-faint">
+        Preguntas rápidas antes de optimizar
+      </p>
+      <div className="flex flex-col gap-3">
+        {questions.map((q, i) => (
+          <div key={i}>
+            <p className="mb-1.5 text-sm text-ink">{q.question}</p>
+            <div className="flex flex-wrap gap-1.5">
+              {q.options.map((option) => {
+                const active = selected[i] === option;
+                return (
+                  <button
+                    key={option}
+                    type="button"
+                    disabled={!interactive}
+                    aria-pressed={active}
+                    onClick={() => toggle(i, option)}
+                    className={`pressable border px-2.5 py-1 text-[13px] transition-colors duration-200 ${
+                      active
+                        ? "border-ink bg-ink text-background"
+                        : "border-line-strong text-muted"
+                    } ${
+                      interactive
+                        ? "cursor-pointer hover:border-ink"
+                        : "cursor-default opacity-60"
+                    }`}
+                  >
+                    {option}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        ))}
+      </div>
+      {interactive && (
+        <div className="mt-4 flex flex-wrap items-center gap-3">
+          <button
+            type="button"
+            disabled={answered === 0}
+            onClick={submit}
+            className={`pressable border px-3 py-1.5 text-[13px] transition-colors duration-200 ${
+              answered > 0
+                ? "cursor-pointer border-ink bg-ink text-background hover:bg-ink/85"
+                : "cursor-default border-line-strong text-faint"
+            }`}
+          >
+            Optimizar con estas respuestas
+            {questions.length > 1 ? ` (${answered}/${questions.length})` : ""}
+          </button>
+          <span className="text-xs text-faint">
+            Marcá tus respuestas o escribí con tus palabras abajo.
+          </span>
+        </div>
+      )}
+    </div>
+  );
 }
 
 function CopyButton({ value }: { value: string }) {
@@ -171,6 +219,7 @@ function ExportButton({ content }: { content: string }) {
 export function ResultMessage({
   text,
   streaming,
+  interactive,
   targetId,
   version,
   onAnswer,
@@ -192,33 +241,11 @@ export function ResultMessage({
       )}
 
       {questions.length > 0 && (
-        <div className="border border-line-strong bg-surface p-4">
-          <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-faint">
-            Preguntas rápidas antes de optimizar
-          </p>
-          <div className="flex flex-col gap-3">
-            {questions.map((q, i) => (
-              <div key={i}>
-                <p className="mb-1.5 text-sm text-ink">{q.question}</p>
-                <div className="flex flex-wrap gap-1.5">
-                  {q.options.map((option) => (
-                    <button
-                      key={option}
-                      type="button"
-                      onClick={() => onAnswer(option)}
-                      className="pressable cursor-pointer border border-line-strong px-2.5 py-1 text-[13px] text-muted transition-colors duration-200 hover:bg-ink hover:text-background"
-                    >
-                      {option}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-          <p className="mt-3 text-xs text-faint">
-            Tocá una opción o respondé con tus palabras abajo.
-          </p>
-        </div>
+        <QuestionsCard
+          questions={questions}
+          interactive={interactive}
+          onAnswer={onAnswer}
+        />
       )}
 
       {blocks.map((block, i) => (

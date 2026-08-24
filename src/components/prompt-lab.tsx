@@ -235,7 +235,7 @@ export function PromptLab() {
                 if (message.role === "user") {
                   return (
                     <div key={message.id} className="flex justify-end">
-                      <div className="max-w-[80%] border border-line bg-surface px-4 py-2.5 text-sm leading-relaxed text-ink">
+                      <div className="max-w-[80%] whitespace-pre-line border border-line bg-surface px-4 py-2.5 text-sm leading-relaxed text-ink">
                         {text}
                       </div>
                     </div>
@@ -247,6 +247,7 @@ export function PromptLab() {
                     key={message.id}
                     text={text}
                     streaming={busy && isLast}
+                    interactive={!busy && isLast}
                     targetId={targetId}
                     version={assistantIds.indexOf(message.id) + 1}
                     onAnswer={(answer) => handleSubmit(answer, null)}
